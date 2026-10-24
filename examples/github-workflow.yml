@@ -1,0 +1,36 @@
+# .github/workflows/port-audit.yml
+name: Port audit
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+  security-events: write
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci
+      - run: npm run build
+      - name: Start the app
+        run: npm start &
+        env:
+          PORT: '3000'
+          NODE_ENV: production
+      - name: Wait for the app
+        run: for i in $(seq 1 60); do curl -s -o /dev/null http://localhost:3000/ && exit 0; sleep 1; done; exit 1
+      - name: Audit
+        run: npx -y @bydtech/port-audit@0.1.0 --port 3000 --format sarif --out port-audit.sarif
+      - name: Upload to code scanning
+        if: always()
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: port-audit.sarif
+          category: port-audit
+      - name: Fail on "Fix now"
+        run: npx -y @bydtech/port-audit@0.1.0 --port 3000 --fail-on fix-now
