@@ -1,4 +1,5 @@
 import type { Ctx } from '../context.js';
+import { headerCase } from '../detect.js';
 
 /** Server and framework names with versions in any response header seen during the run. */
 export async function checkDisclosure(ctx: Ctx): Promise<void> {
@@ -10,7 +11,7 @@ export async function checkDisclosure(ctx: Ctx): Promise<void> {
       if (!value) continue;
       // Server without a version ("nginx", "cloudflare") is fine; X-Powered-By is flagged whatever it says.
       if (name === 'server' && !/\d/.test(value)) continue;
-      const key = `${name}: ${value}`;
+      const key = `${headerCase(name)}: ${value}`;
       if (!seen.has(key)) {
         if (!seen.size) url = r.url;
         seen.set(key, r.url);

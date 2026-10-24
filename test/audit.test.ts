@@ -82,7 +82,7 @@ describe('fixture apps', () => {
     const r = await run(aspnetLike);
     expect(r.frameworks[0]?.id).toBe('aspnet');
     const d = r.findings.find((f) => f.id === 'disclosure/version-header');
-    expect(d?.evidence).toMatch(/x-aspnet-version: 4\.0\.30319/);
+    expect(d?.evidence).toMatch(/X-Aspnet-Version: 4\.0\.30319/);
     expect(d?.snippets[0]?.code).toContain('AddServerHeader');
   });
 

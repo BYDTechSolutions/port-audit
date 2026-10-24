@@ -16,9 +16,12 @@ export const frameworkName = (id: FrameworkId): string => NAMES[id];
 
 type Signal = [FrameworkId, (r: Response, cookies: string[]) => string | null];
 
+/** `x-powered-by` → `X-Powered-By`, for evidence lines. */
+export const headerCase = (name: string): string => name.split('-').map((w) => (w ? w[0]!.toUpperCase() + w.slice(1) : w)).join('-');
+
 const header = (name: string, re: RegExp, label?: string) => (r: Response) => {
   const v = r.headers[name];
-  return v && re.test(v) ? label ?? `${name}: ${v}` : null;
+  return v && re.test(v) ? label ?? `${headerCase(name)}: ${v}` : null;
 };
 const cookie = (re: RegExp, label: string) => (_r: Response, names: string[]) => (names.some((n) => re.test(n)) ? label : null);
 const body = (re: RegExp, label: string) => (r: Response) => (re.test(r.text.slice(0, 200_000)) ? label : null);
@@ -29,7 +32,10 @@ const SIGNALS: Signal[] = [
   ['express', (r) => (r.status === 404 && /<pre>Cannot (GET|HEAD) /.test(r.text) ? 'Express default 404 page ("Cannot GET ...")' : null)],
   ['nestjs', (r) => (r.status === 404 && /"statusCode"\s*:\s*404/.test(r.text) && /Cannot (GET|HEAD) /.test(r.text) ? 'NestJS default 404 JSON ({"message":"Cannot GET ...","statusCode":404})' : null)],
   ['nextjs', header('x-powered-by', /next\.js/i)],
-  ['nextjs', (r) => (Object.keys(r.headers).find((k) => k.startsWith('x-nextjs-')) ? `${Object.keys(r.headers).find((k) => k.startsWith('x-nextjs-'))} header` : null)],
+  ['nextjs', (r) => {
+    const k = Object.keys(r.headers).find((h) => h.startsWith('x-nextjs-'));
+    return k ? `${headerCase(k)} header` : null;
+  }],
   ['nextjs', body(/id="__NEXT_DATA__"|\/_next\/static\//, '/_next/static/ assets or __NEXT_DATA__ in the HTML')],
   ['django', cookie(/^(csrftoken|sessionid)$/, 'csrftoken or sessionid cookie')],
   ['django', body(/name="csrfmiddlewaretoken"/, 'csrfmiddlewaretoken form field')],
