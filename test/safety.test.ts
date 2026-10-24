@@ -112,7 +112,8 @@ describe('politeness', () => {
     // Sends are spaced exactly (see the fake-clock test); arrival times jitter a little in one process.
     const average = ((f.hits.at(-1) as { at: number }).at - (f.hits[0] as { at: number }).at) / gaps.length;
     expect(average).toBeGreaterThanOrEqual(45);
-    expect(Math.min(...gaps)).toBeGreaterThanOrEqual(20);
+    // At 20 per second, no 200 ms window holds more than 4 starts; allow one for connect-time jitter.
+    for (const h of f.hits) expect(f.hits.filter((x) => x.at >= h.at && x.at < h.at + 200).length).toBeLessThanOrEqual(5);
   });
 
   it('stops at the request cap and says so', async () => {
