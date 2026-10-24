@@ -121,7 +121,7 @@ jobs:
         run: npx -y @bydtech/port-audit@0.1.0 --port 3000 --fail-on fix-now
 ```
 
-Change the build and start commands to your stack's (`python manage.py runserver` is a development server; scan what you deploy, such as `gunicorn`). The same file is in [`examples/github-workflow.yml`](examples/github-workflow.yml). Code-scanning alerts point at the URL where the problem was seen, not at a source line, because a port scan never sees your source.
+Change the build and start commands to your stack's (`python manage.py runserver` is a development server; scan what you deploy, such as `gunicorn`). The same file is in [`examples/github-workflow.yml`](examples/github-workflow.yml). A port scan never sees your source, so each code-scanning alert is filed under a made-up path such as `port-audit/localhost/index` and names the URL in its message.
 
 ## Safety rules
 

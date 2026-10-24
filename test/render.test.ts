@@ -1,4 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { sarifLocation } from '../src/render/sarif.js';
 import { auditPort, formatJunit, formatMarkdown, formatSarif, formatText, RULE_LIST, type Report } from '../src/index.js';
 import { expressNoHelmet, serve, wellConfigured, type Fixture } from './servers.js';
 
@@ -70,12 +71,21 @@ describe('SARIF', () => {
       expect(run.tool.driver.rules[r.ruleIndex].id).toBe(r.ruleId);
       expect(['error', 'warning', 'note']).toContain(r.level);
       expect(r.message.text.length).toBeGreaterThan(0);
-      expect(r.locations[0].physicalLocation.artifactLocation.uri).toMatch(/^http:\/\//);
+      expect(r.locations[0].physicalLocation.artifactLocation.uri).toMatch(/^port-audit\/127\.0\.0\.1\//);
+      expect(r.properties.url).toMatch(/^http:\/\//);
       expect(r.locations[0].physicalLocation.region.startLine).toBe(1);
       expect(r.partialFingerprints.primaryLocationLineHash).toMatch(/^[0-9a-f]{16}:1$/);
     }
     const tags = run.tool.driver.rules.find((x: { id: string }) => x.id === 'cors/reflected-credentials').properties.tags;
     expect(tags).toEqual(['owasp-top10-2025:A02', 'owasp-api-2023:API8', 'owasp-asvs-5.0.0:3.4.2', 'external/cwe/cwe-942', 'security']);
+  });
+});
+
+describe('SARIF locations', () => {
+  it('are relative and cannot be mistaken for repository files', () => {
+    expect(sarifLocation('http://localhost:3000/')).toBe('port-audit/localhost/index');
+    expect(sarifLocation('https://127.0.0.1:8443/a b/c?x=1')).toBe('port-audit/127.0.0.1/a%20b/c');
+    expect(sarifLocation('http://[::1]:3000/x')).toBe('port-audit/%5B::1%5D/x');
   });
 });
 

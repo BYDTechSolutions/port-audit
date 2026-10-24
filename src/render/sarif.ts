@@ -1,6 +1,10 @@
 /**
  * SARIF 2.1.0 for GitHub code scanning. A port scan has no source files, so
- * each result's location is the URL it was seen on. Rules carry
+ * each result's location is a relative, made-up path under `port-audit/`
+ * (host and URL path): GitHub rejects an upload whose absolute URIs use
+ * another scheme than the checkout's `file://`, and a relative path under
+ * `port-audit/` cannot collide with a real file. The full URL is in the
+ * message and in `properties.url`. Rules carry
  * `security-severity` (a string, as GitHub requires) and tags with the OWASP
  * IDs, kept within GitHub's 10-tag display limit.
  */
@@ -26,6 +30,16 @@ export function sarifTags(r: Rule): string[] {
   return [...tags, 'security'];
 }
 
+/** `http://localhost:3000/admin?x=1` → `port-audit/localhost/admin`. The port is left out so alerts survive a port change. */
+export function sarifLocation(url: string): string {
+  try {
+    const u = new URL(url);
+    return `port-audit/${encodeURI(u.hostname)}${encodeURI(decodeURI(u.pathname))}`.replace(/\/$/, '/index');
+  } catch {
+    return 'port-audit/target';
+  }
+}
+
 const pascal = (id: string) => id.split(/[/-]/).map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join('');
 
 /** Renders a report as a SARIF 2.1.0 log. */
@@ -48,11 +62,11 @@ export function formatSarif(report: Report): string {
     ruleId: f.id,
     ruleIndex: index.get(f.id),
     level: LEVEL[f.priority],
-    message: { text: `${f.title}. ${f.evidence}${f.details?.length ? ` (${f.details.join('; ')})` : ''}` },
-    locations: [{ physicalLocation: { artifactLocation: { uri: f.url }, region: { startLine: 1 } } }],
+    message: { text: `${f.title} at ${f.url}. ${f.evidence}${f.details?.length ? ` (${f.details.join('; ')})` : ''}` },
+    locations: [{ physicalLocation: { artifactLocation: { uri: sarifLocation(f.url) }, region: { startLine: 1 } } }],
     partialFingerprints: { primaryLocationLineHash: `${f.fingerprint}:1` },
     fingerprints: { 'portAudit/v1': f.fingerprint },
-    properties: { priority: f.priority, 'security-severity': SECURITY_SEVERITY[f.priority] },
+    properties: { url: f.url, priority: f.priority, 'security-severity': SECURITY_SEVERITY[f.priority] },
   }));
   const log = {
     $schema: 'https://json.schemastore.org/sarif-2.1.0.json',

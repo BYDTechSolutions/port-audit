@@ -106,6 +106,9 @@ export async function resolveTarget(
 ): Promise<ResolvedTarget> {
   const host = bareHost(url.hostname);
   const owned = !!iOwnThis && bareHost(iOwnThis) === host;
+  if (host === '0.0.0.0' || host === '::') {
+    throw new PortAuditError('REFUSED', `${host} means "every interface" to a server, not an address to connect to. Use localhost, e.g. http://localhost:${url.port || 80}/`);
+  }
   if (!owned && !isAllowedHost(host)) {
     const hint = iOwnThis ? ` (--i-own-this names ${iOwnThis}, which is not this host)` : '';
     throw new PortAuditError(
