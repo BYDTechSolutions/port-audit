@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-10-25
+
+### Changed
+
+- Published from GitHub Actions with npm trusted publishing, so the package carries a provenance attestation. No code changes.
+
 ## [0.1.0] - 2026-10-25
 
 ### Added
@@ -19,5 +25,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A coverage section in every report that states what this release does not check: exposed files or endpoints, directory listing, error leakage, open redirects, injection, authentication and access control.
 - API: `auditPort`, `formatReport` and the individual renderers, the rule list, snippets, advisories, coverage and sources.
 
-[Unreleased]: https://github.com/BYDTechSolutions/port-audit/compare/v0.1.0...HEAD
-[0.1.0]: https://github.com/BYDTechSolutions/port-audit/releases/tag/v0.1.0
+[Unreleased]: https://github.com/BYDTechSolutions/port-audit/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/BYDTechSolutions/port-audit/compare/d71c556...v0.1.1
+[0.1.0]: https://github.com/BYDTechSolutions/port-audit/tree/d71c556

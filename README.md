@@ -110,7 +110,7 @@ jobs:
       - name: Wait for the app
         run: for i in $(seq 1 60); do curl -s -o /dev/null http://localhost:3000/ && exit 0; sleep 1; done; exit 1
       - name: Audit
-        run: npx -y @bydtech/port-audit@0.1.0 --port 3000 --format sarif --out port-audit.sarif
+        run: npx -y @bydtech/port-audit@0.1.1 --port 3000 --format sarif --out port-audit.sarif
       - name: Upload to code scanning
         if: always()
         uses: github/codeql-action/upload-sarif@v4
@@ -118,7 +118,7 @@ jobs:
           sarif_file: port-audit.sarif
           category: port-audit
       - name: Fail on "Fix now"
-        run: npx -y @bydtech/port-audit@0.1.0 --port 3000 --fail-on fix-now
+        run: npx -y @bydtech/port-audit@0.1.1 --port 3000 --fail-on fix-now
 ```
 
 Change the build and start commands to your stack's (`python manage.py runserver` is a development server; scan what you deploy, such as `gunicorn`). The same file is in [`examples/github-workflow.yml`](examples/github-workflow.yml). A port scan never sees your source, so each code-scanning alert is filed under a made-up path such as `port-audit/localhost/index` and names the URL in its message.
