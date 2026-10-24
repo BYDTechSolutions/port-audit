@@ -22,7 +22,7 @@ import { extractTags, isHtml } from './html.js';
 import { Client, Limiter, type Response } from './net/client.js';
 import { Redactor } from './redact.js';
 import { rule } from './rules.js';
-import { isAllowedHost, parseTarget, resolveTarget } from './target.js';
+import { bareHost, isAllowedHost, parseTarget, resolveTarget } from './target.js';
 import { GROUPS, PRIORITIES, type AuditOptions, type Finding, type FrameworkId, type Passed, type Report } from './types.js';
 import { REPO_URL, VERSION } from './version.js';
 
@@ -97,11 +97,22 @@ export async function auditPort(target: string | number, options: AuditOptions =
   responses.push(main);
   const location = main.headers.location;
   if ([301, 302, 303, 307, 308].includes(main.status) && location) {
-    const followed = await client.get(new URL(location, url));
-    for (const hop of followed.hops) notes.push(`Followed redirect: ${hop}`);
-    if (followed.offHost) notes.push(`${main.url} redirects to ${followed.offHost}, another host; it was not followed (only ${resolved.host} is in scope).`);
-    if (followed.res) main = record(followed.res) as Response;
-    else if (!followed.offHost) notes.push('Could not follow the redirect from the main page.');
+    let next: URL | null = null;
+    try {
+      next = new URL(location, url);
+    } catch {
+      notes.push(`${main.url} redirects to an invalid location; it was not followed.`);
+    }
+    if (next && (bareHost(next.hostname) !== resolved.host || (next.protocol !== 'http:' && next.protocol !== 'https:'))) {
+      notes.push(`${main.url} redirects to ${next.origin}, another host; it was not followed (only ${resolved.host} is in scope).`);
+    } else if (next) {
+      notes.push(`Followed redirect: ${main.status} ${main.url} -> ${next.href}`);
+      const followed = await client.get(next);
+      for (const hop of followed.hops) notes.push(`Followed redirect: ${hop}`);
+      if (followed.offHost) notes.push(`The redirect chain leads to ${followed.offHost}, another host; it was not followed (only ${resolved.host} is in scope).`);
+      if (followed.res) main = record(followed.res) as Response;
+      else if (!followed.offHost) notes.push('Could not follow the redirect from the main page.');
+    }
   }
   const base = new URL(main.url);
   const toPage = (res: Response): Page => {
@@ -154,7 +165,7 @@ export async function auditPort(target: string | number, options: AuditOptions =
     pages,
     paths,
     timeoutMs,
-    address: () => resolved.addresses[0] as string,
+    address: () => client.currentAddress,
     responses,
     fetch: fetchPath,
     scripts: () => (scriptCache ??= loadScripts()),

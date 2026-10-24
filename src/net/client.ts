@@ -96,6 +96,11 @@ export class Client {
     this.address = opts.addresses[0] as string;
   }
 
+  /** The address requests go to (the one that answered first). */
+  get currentAddress(): string {
+    return this.address;
+  }
+
   /** Throws `REFUSED` unless the URL is on the target's host. Redirects and extra paths go through this too. */
   assertSameHost(url: URL): void {
     if (bareHost(url.hostname) !== this.host) {
