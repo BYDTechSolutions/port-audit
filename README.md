@@ -80,7 +80,7 @@ Findings cover only what a passive scan of the pages read can see. An empty list
 
 ## In CI: a GitHub Action
 
-Build and start your app, wait until it answers, then scan it. The findings go to code scanning, and the job fails on anything in "Fix now":
+Start your app in the background, then add one step. The action waits for the app to answer, scans it once, prints the report in the log, adds it to the job summary, writes a SARIF file, and fails the job on anything in "Fix now":
 
 ```yaml
 # .github/workflows/port-audit.yml
@@ -91,7 +91,6 @@ on:
     branches: [main]
 permissions:
   contents: read
-  security-events: write
 jobs:
   audit:
     runs-on: ubuntu-latest
@@ -100,28 +99,46 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - run: npm ci
-      - run: npm run build
+      - run: npm ci && npm run build
       - name: Start the app
         run: npm start &
         env:
           PORT: '3000'
           NODE_ENV: production
-      - name: Wait for the app
-        run: for i in $(seq 1 60); do curl -s -o /dev/null http://localhost:3000/ && exit 0; sleep 1; done; exit 1
-      - name: Audit
-        run: npx -y @bydtech/port-audit@0.1.1 --port 3000 --format sarif --out port-audit.sarif
-      - name: Upload to code scanning
+      - uses: BYDTechSolutions/port-audit@v0
+        with:
+          target: 3000
+```
+
+Change the build and start commands to your stack's (`python manage.py runserver` is a development server; scan what you deploy, such as `gunicorn`). `@v0` moves to each 0.x release; pin `@v0.1.2` to stay on one version.
+
+To see the findings as code-scanning alerts, upload the SARIF file. Add `security-events: write` to `permissions` and this step after the audit (code scanning on a private repository needs GitHub Advanced Security):
+
+```yaml
+      - uses: github/codeql-action/upload-sarif@v4
         if: always()
-        uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: port-audit.sarif
           category: port-audit
-      - name: Fail on "Fix now"
-        run: npx -y @bydtech/port-audit@0.1.1 --port 3000 --fail-on fix-now
 ```
 
-Change the build and start commands to your stack's (`python manage.py runserver` is a development server; scan what you deploy, such as `gunicorn`). The same file is in [`examples/github-workflow.yml`](examples/github-workflow.yml). A port scan never sees your source, so each code-scanning alert is filed under a made-up path such as `port-audit/localhost/index` and names the URL in its message.
+A port scan never sees your source, so each alert is filed under a made-up path such as `port-audit/localhost/index` and names the URL in its message. The full file is in [`examples/github-workflow.yml`](examples/github-workflow.yml).
+
+| Input | Default | What it does |
+|---|---|---|
+| `target` | `3000` | a port on localhost, or a URL such as `http://localhost:8080/app` |
+| `wait` | `60` | seconds to wait for the target to answer; `0` skips the wait |
+| `fail-on` | `fix-now` | fail the step at `fix-now`, at `should-fix` or above, or `none` |
+| `sarif-file` | `port-audit.sarif` | where to write SARIF; empty skips it |
+| `paths` | | more pages on the same host, one per line (`--path`) |
+| `headers` | | headers to send, one per line, e.g. `Cookie: ${{ secrets.SESSION }}`; redacted in reports |
+| `baseline` | | an earlier JSON or SARIF report whose findings are hidden |
+| `framework` | detected | use this framework's fix snippets |
+| `i-own-this` | | allow one host outside localhost and private networks |
+| `args` | | any other CLI options, e.g. `--rate 5` |
+| `package` | this tag's version | the npm package to run |
+
+Outputs: `fix-now`, `should-fix` and `nice-to-have` (counts), `sarif-file`, `report-json` and `report-md` (paths). The action needs Node.js 20 or newer on the runner, which GitHub-hosted runners have, and runs on Linux, macOS and Windows runners.
 
 ## Safety rules
 
@@ -185,7 +202,7 @@ port-audit [url | port] [options]
 |---|---|---|
 | `-p, --port <n>` | | audit `http://localhost:<n>/` |
 | `-f, --format <fmt>` | `text` | `text`, `json`, `md`, `sarif` or `junit` |
-| `-o, --out <file>` | stdout | write the report to a file; the format follows `.json`, `.md`, `.sarif` or `.xml` |
+| `-o, --out <file>` | stdout | write the report to a file; the format follows `.json`, `.md`, `.sarif` or `.xml` (anything else is text). Repeat it to write several formats from one scan |
 | `--fail-on <level>` | | exit 1 if any finding is at `fix-now`, or at `should-fix` or above |
 | `--baseline <file>` | | hide findings already in an earlier `--format json` or `sarif` report |
 | `--path <path>` | | also read this page on the same host (repeatable); its headers, CORS answers and scripts are checked too |

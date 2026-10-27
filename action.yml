@@ -1,0 +1,80 @@
+name: 'BYD port-audit'
+description: 'Passive security audit of your running app on a local port, with framework fix snippets and OWASP IDs.'
+author: 'BYD Tech'
+branding:
+  icon: 'shield'
+  color: 'blue'
+
+inputs:
+  target:
+    description: 'The app to audit: a port on localhost (3000) or a URL (http://localhost:8080/app). Start the app in an earlier step.'
+    default: '3000'
+  wait:
+    description: 'Seconds to wait for the target to answer before auditing. 0 skips the wait.'
+    default: '60'
+  fail-on:
+    description: 'Fail the step when a finding is at this level or above: fix-now, should-fix, or none.'
+    default: 'fix-now'
+  sarif-file:
+    description: 'Where to write the SARIF report for GitHub code scanning. Empty skips it.'
+    default: 'port-audit.sarif'
+  paths:
+    description: 'More pages on the same host to read, one per line (for example /login).'
+    default: ''
+  headers:
+    description: 'Headers to send on every request, one per line (for example "Cookie: session=..."). Values are redacted in every report; pass secrets from secrets.*.'
+    default: ''
+  baseline:
+    description: 'An earlier JSON or SARIF report. Findings already in it are hidden.'
+    default: ''
+  framework:
+    description: 'Use this framework''s fix snippets instead of the detected one: express, nextjs, nestjs, django, flask, fastapi, rails, laravel, spring, aspnet, nginx, apache.'
+    default: ''
+  i-own-this:
+    description: 'Allow one host outside localhost and private networks. It must equal the target''s host exactly. Only scan systems you own.'
+    default: ''
+  args:
+    description: 'Extra command-line options, for example "--rate 5 --timeout 20000".'
+    default: ''
+  package:
+    description: 'The npm package to run. Defaults to the @bydtech/port-audit version that matches this action''s tag.'
+    default: ''
+
+outputs:
+  fix-now:
+    description: 'Number of "Fix now" findings.'
+    value: ${{ steps.run.outputs.fix-now }}
+  should-fix:
+    description: 'Number of "Should fix" findings.'
+    value: ${{ steps.run.outputs.should-fix }}
+  nice-to-have:
+    description: 'Number of "Nice to have" findings.'
+    value: ${{ steps.run.outputs.nice-to-have }}
+  sarif-file:
+    description: 'Path of the SARIF report, if one was written.'
+    value: ${{ steps.run.outputs.sarif-file }}
+  report-json:
+    description: 'Path of the full JSON report.'
+    value: ${{ steps.run.outputs.report-json }}
+  report-md:
+    description: 'Path of the Markdown report (also added to the job summary).'
+    value: ${{ steps.run.outputs.report-md }}
+
+runs:
+  using: 'composite'
+  steps:
+    - id: run
+      shell: bash
+      run: bash "$GITHUB_ACTION_PATH/action/run.sh"
+      env:
+        INPUT_TARGET: ${{ inputs.target }}
+        INPUT_WAIT: ${{ inputs.wait }}
+        INPUT_FAIL_ON: ${{ inputs.fail-on }}
+        INPUT_SARIF_FILE: ${{ inputs.sarif-file }}
+        INPUT_PATHS: ${{ inputs.paths }}
+        INPUT_HEADERS: ${{ inputs.headers }}
+        INPUT_BASELINE: ${{ inputs.baseline }}
+        INPUT_FRAMEWORK: ${{ inputs.framework }}
+        INPUT_I_OWN_THIS: ${{ inputs.i-own-this }}
+        INPUT_ARGS: ${{ inputs.args }}
+        INPUT_PACKAGE: ${{ inputs.package }}
