@@ -48,7 +48,8 @@ Examples:
 Options:
   -p, --port <n>           audit http://localhost:<n>/ (instead of a URL)
   -f, --format <fmt>       text (default), json, md, sarif or junit
-  -o, --out <file>         write the report to a file (format from .json/.md/.sarif/.xml)
+  -o, --out <file>         write the report to a file, format from .json/.md/.sarif/.xml
+                           (anything else is text); repeat to write several formats at once
       --fail-on <level>    exit 1 if any finding is at this level or above: fix-now or should-fix
       --baseline <file>    hide findings already in this file (an earlier json or sarif report)
       --path <path>        also read this page on the same host (repeatable), e.g. /login
@@ -111,7 +112,7 @@ export async function main(argv: string[], io: CliIo): Promise<number> {
       options: {
         port: { type: 'string', short: 'p' },
         format: { type: 'string', short: 'f' },
-        out: { type: 'string', short: 'o' },
+        out: { type: 'string', short: 'o', multiple: true },
         'fail-on': { type: 'string' },
         baseline: { type: 'string' },
         path: { type: 'string', multiple: true },
@@ -155,14 +156,14 @@ export async function main(argv: string[], io: CliIo): Promise<number> {
   if (values.port && !/^\d{1,5}$/.test(values.port)) return usage('--port must be a number, e.g. --port 3000.');
   const targetText = values.port ?? (positionals[0] as string);
 
+  const outs = values.out ?? [];
   let format: ReportFormat = 'text';
   if (values.format) {
     if (!FORMATS.includes(values.format as ReportFormat)) return usage(`--format must be one of ${FORMATS.join(', ')}.`);
+    if (outs.length > 1) return usage('--format works with one --out. With several, each file\'s extension picks its format (.json, .md, .sarif, .xml, anything else is text).');
     format = values.format as ReportFormat;
-  } else if (values.out) {
-    const ext = extname(values.out).toLowerCase();
-    format = ext === '.json' ? 'json' : ext === '.md' || ext === '.markdown' ? 'md' : ext === '.sarif' ? 'sarif' : ext === '.xml' ? 'junit' : 'text';
   }
+  const formatOf = (file: string): ReportFormat => (values.format ? format : formatFromExtension(file));
   const failOn = values['fail-on'];
   if (failOn && !FAIL_LEVELS[failOn]) return usage('--fail-on must be fix-now or should-fix.');
   const num = (value: string | undefined, min: number, max: number, integer: boolean): number | undefined | null => {
@@ -241,20 +242,23 @@ export async function main(argv: string[], io: CliIo): Promise<number> {
   }
   clearProgress();
 
-  const color = format === 'text' && !values.out && io.stdoutIsTTY && !values['no-color'] && !io.env.NO_COLOR;
-  const output = formatReport(report, format, { color, width: Math.min(110, io.columns ?? 100) });
+  const width = Math.min(110, io.columns ?? 100);
   const c = counts(report);
-  if (values.out) {
-    const path = resolve(values.out);
-    try {
-      await (io.writeFile ?? ((p: string, d: string) => writeFile(p, d, 'utf8')))(path, output);
-    } catch (error) {
-      io.stderr(`port-audit: could not write ${path}: ${(error as Error).message}\n`);
-      return 2;
+  if (outs.length) {
+    const write = io.writeFile ?? ((p: string, d: string) => writeFile(p, d, 'utf8'));
+    for (const file of outs) {
+      const path = resolve(file);
+      try {
+        await write(path, formatReport(report, formatOf(file), { color: false, width }));
+      } catch (error) {
+        io.stderr(`port-audit: could not write ${path}: ${(error as Error).message}\n`);
+        return 2;
+      }
+      io.stderr(`port-audit: wrote ${path} (${c['fix-now']} fix now, ${c['should-fix']} should fix, ${c['nice-to-have']} nice to have)\n`);
     }
-    io.stderr(`port-audit: wrote ${path} (${c['fix-now']} fix now, ${c['should-fix']} should fix, ${c['nice-to-have']} nice to have)\n`);
   } else {
-    io.stdout(output);
+    const color = format === 'text' && io.stdoutIsTTY && !values['no-color'] && !io.env.NO_COLOR;
+    io.stdout(formatReport(report, format, { color, width }));
   }
   if (failOn) {
     const levels = FAIL_LEVELS[failOn] as Priority[];
@@ -265,4 +269,10 @@ export async function main(argv: string[], io: CliIo): Promise<number> {
     }
   }
   return 0;
+}
+
+/** The report format a file name asks for: .json, .md, .sarif, .xml (JUnit), anything else text. */
+function formatFromExtension(file: string): ReportFormat {
+  const ext = extname(file).toLowerCase();
+  return ext === '.json' ? 'json' : ext === '.md' || ext === '.markdown' ? 'md' : ext === '.sarif' ? 'sarif' : ext === '.xml' ? 'junit' : 'text';
 }

@@ -64,6 +64,28 @@ describe('cli', () => {
     expect(t2.out()).toMatch(/Nothing to report outside the baseline \(\d+ hidden\)/);
   });
 
+  it('several --out files write several formats from one scan, and --fail-on still applies', async () => {
+    fixture = await serve(permissiveCors);
+    const t = io();
+    const args = [fixture.url, '-o', 'r.txt', '-o', 'r.md', '-o', 'r.sarif', '-o', 'r.json', '-o', 'r.xml', '--fail-on', 'fix-now', '--rate', '50'];
+    expect(await main(args, t.value)).toBe(1);
+    const byExt = (ext: string) => [...t.files.entries()].find(([p]) => p.endsWith(ext))?.[1] as string;
+    expect(t.files.size).toBe(5);
+    expect(byExt('r.txt')).toContain('FIX NOW');
+    expect(byExt('r.txt')).not.toContain('\u001b[');
+    expect(byExt('r.md')).toMatch(/^# /m);
+    expect(JSON.parse(byExt('r.sarif')).version).toBe('2.1.0');
+    expect(JSON.parse(byExt('r.json')).findings.length).toBeGreaterThan(0);
+    expect(byExt('r.xml')).toMatch(/^<\?xml/);
+    expect(t.out()).toBe('');
+  });
+
+  it('--format with several --out files is a usage error', async () => {
+    const t = io();
+    expect(await main(['--port', '3000', '-f', 'json', '-o', 'a.json', '-o', 'b.md'], t.value)).toBe(2);
+    expect(t.err()).toContain('--format works with one --out');
+  });
+
   it('--format sarif and junit', async () => {
     fixture = await serve(expressNoHelmet);
     const s = io();
