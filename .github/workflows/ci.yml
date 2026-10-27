@@ -52,15 +52,6 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: Start-Process -FilePath node -ArgumentList 'examples/demo-app.mjs' -WindowStyle Hidden
-      - name: Debug (Windows)
-        if: runner.os == 'Windows'
-        shell: bash
-        run: |
-          sleep 3
-          netstat -ano | grep ':3000' || echo "nothing on 3000"
-          curl -sv --max-time 5 -o /dev/null http://127.0.0.1:3000/ 2>&1 | tail -5
-          curl -sv --max-time 5 -o /dev/null http://localhost:3000/ 2>&1 | tail -8
-          tasklist | grep -i node || true
       - name: Audit, report only
         id: report
         uses: ./

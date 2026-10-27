@@ -4,9 +4,6 @@
 # One scan writes every format: text for the log, Markdown for the job summary,
 # JSON for the outputs, SARIF for code scanning.
 set -uo pipefail
-# On Windows runners, Git Bash rewrites arguments that start with / (such as
-# --path /login) into Windows paths before node sees them. Turn that off.
-export MSYS_NO_PATHCONV=1 MSYS2_ARG_CONV_EXCL='*'
 
 fail() {
   echo "::error title=port-audit::$1"
@@ -32,7 +29,7 @@ wait="${INPUT_WAIT:-60}"
 if [ "$wait" -gt 0 ]; then
   echo "Waiting up to ${wait}s for $url to answer..."
   deadline=$((SECONDS + wait))
-  until curl -sk -o /dev/null --max-time 5 "$url"; do
+  until curl -sk --max-time 5 "$url" > /dev/null; do
     if [ "$SECONDS" -ge "$deadline" ]; then
       fail "$url did not answer within ${wait}s. Start the app in an earlier step, in the background (for example: npm start &), or raise the wait input."
     fi
@@ -63,7 +60,9 @@ if [ -n "${INPUT_ARGS:-}" ]; then
 fi
 
 echo "Running $pkg"
-npx --yes --package="$pkg" -- port-audit "${args[@]}"
+# On Windows runners, Git Bash rewrites arguments that start with / (such as
+# --path /login) into Windows paths. The two variables turn that off for npx.
+MSYS_NO_PATHCONV=1 MSYS2_ARG_CONV_EXCL='*' npx --yes --package="$pkg" -- port-audit "${args[@]}"
 code=$?
 
 [ -f "$out/report.txt" ] || exit "$code"
