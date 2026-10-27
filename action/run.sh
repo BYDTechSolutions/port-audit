@@ -4,6 +4,9 @@
 # One scan writes every format: text for the log, Markdown for the job summary,
 # JSON for the outputs, SARIF for code scanning.
 set -uo pipefail
+# On Windows runners, Git Bash rewrites arguments that start with / (such as
+# --path /login) into Windows paths before node sees them. Turn that off.
+export MSYS_NO_PATHCONV=1 MSYS2_ARG_CONV_EXCL='*'
 
 fail() {
   echo "::error title=port-audit::$1"
