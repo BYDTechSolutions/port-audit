@@ -45,8 +45,13 @@ jobs:
           npm pack --ignore-scripts --pack-destination "$RUNNER_TEMP"
           echo "tgz=$(ls "$RUNNER_TEMP"/bydtech-port-audit-*.tgz)" >> "$GITHUB_OUTPUT"
       - name: Start the demo app
+        if: runner.os != 'Windows'
         shell: bash
         run: node examples/demo-app.mjs &
+      - name: Start the demo app (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: Start-Process -FilePath node -ArgumentList 'examples/demo-app.mjs' -WindowStyle Hidden
       - name: Audit, report only
         id: report
         uses: ./
