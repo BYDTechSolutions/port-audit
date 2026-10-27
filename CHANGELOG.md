@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.3] - 2026-10-28
+
+### Fixed
+
+- The npm description listed exposed files, debug pages and open redirects, which this release does not check. It now lists only what the checks cover.
+
 ## [0.1.2] - 2026-10-28
 
 ### Added
@@ -32,7 +38,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A coverage section in every report that states what this release does not check: exposed files or endpoints, directory listing, error leakage, open redirects, injection, authentication and access control.
 - API: `auditPort`, `formatReport` and the individual renderers, the rule list, snippets, advisories, coverage and sources.
 
-[Unreleased]: https://github.com/BYDTechSolutions/port-audit/compare/v0.1.2...HEAD
+[Unreleased]: https://github.com/BYDTechSolutions/port-audit/compare/v0.1.3...HEAD
+[0.1.3]: https://github.com/BYDTechSolutions/port-audit/compare/v0.1.2...v0.1.3
 [0.1.2]: https://github.com/BYDTechSolutions/port-audit/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/BYDTechSolutions/port-audit/compare/d71c556...v0.1.1
 [0.1.0]: https://github.com/BYDTechSolutions/port-audit/tree/d71c556

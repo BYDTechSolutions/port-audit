@@ -1,7 +1,7 @@
 {
   "name": "@bydtech/port-audit",
-  "version": "0.1.2",
-  "description": "Point it at your running app on a local port and get, in seconds, the security problems visible from outside: headers, cookies, CORS, TLS, exposed files, debug pages, open redirects and vulnerable front-end libraries, mapped to OWASP, with a fix snippet for your framework. Passive, no Docker, no telemetry.",
+  "version": "0.1.3",
+  "description": "Point it at your running app on a local port and get, in seconds, the security problems a passive scan can see: security headers and CSP, cookies, CORS, TLS, HTTP methods, scripts without SRI, vulnerable front-end libraries and version leaks, mapped to OWASP, with a fix snippet for your framework. No Docker, no telemetry.",
   "keywords": [
     "security",
     "owasp",

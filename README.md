@@ -110,7 +110,7 @@ jobs:
           target: 3000
 ```
 
-Change the build and start commands to your stack's (`python manage.py runserver` is a development server; scan what you deploy, such as `gunicorn`). `@v0` moves to each 0.x release; pin `@v0.1.2` to stay on one version.
+Change the build and start commands to your stack's (`python manage.py runserver` is a development server; scan what you deploy, such as `gunicorn`). `@v0` moves to each 0.x release; pin `@v0.1.3` to stay on one version.
 
 To see the findings as code-scanning alerts, upload the SARIF file. Add `security-events: write` to `permissions` and this step after the audit (code scanning on a private repository needs GitHub Advanced Security):
 
